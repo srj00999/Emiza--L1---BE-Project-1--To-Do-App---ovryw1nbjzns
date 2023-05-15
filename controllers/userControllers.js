@@ -63,6 +63,23 @@ const loginUser =async (req, res) => {
     const password = req.body.password;
 
     //Write your code here.
+    const user = await Users.findOne({ email });
+  if (!user) {
+    return res
+      .status(404)
+      .json({
+        message: "User with this E-mail does not exist !!",
+        status: "fail",
+      });
+  }
+  const validate = await bcrypt.compare(password, user.password);
+  if (!validate) {
+    return res
+      .status(403)
+      .json({ message: "Invalid Password, try again !!", status: "fail" });
+  }
+  const token = jwt.sign({ userid: user._id }, JWT_SECRET, { expiresIn: "1h" });
+  return res.status(200).json({ status: "success", token });
 
 }
 
@@ -120,6 +137,38 @@ const signupUser = async (req, res) => {
     const {email, password, name, role} = req.body;
 
      //Write your code here.
+     const isExistingUser = await Users.find({ email });
+  if (isExistingUser.length !== 0) {
+    return res
+      .status(409)
+      .json({
+        message: "User with given Email allready register",
+        status: "fail",
+      });
+  }
+  const salt = await bcrypt.genSalt(saltRounds);
+  const hashedPassword = await bcrypt.hash(password, salt);
+  console.log(hashedPassword);
+  const user = {
+    email: email,
+    password: hashedPassword,
+    name: name,
+    role: role,
+  };
+
+  let newUser = new Users(user);
+  console.log(newUser);
+  newUser.save((err, returnUser) => {
+    console.log(err);
+    if (err) {
+      return res
+        .status(404)
+        .json({ message: "Something went wrong", status: "fail" });
+    }
+    res
+      .status(200)
+      .json({ message: "User SignedUp successfully", status: "success" });
+  });
 
 }
 
